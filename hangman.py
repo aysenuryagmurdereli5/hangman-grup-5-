@@ -8,6 +8,7 @@ Usage:
 import argparse
 import random
 import string
+import sys
 
 MIN_LIVES = 3
 MAX_LIVES = 10
@@ -37,6 +38,7 @@ def parse_args():
 
     return args
 
+
 def load_words(path):
     """Load a list of words from a UTF-8 text file.
 
@@ -48,7 +50,7 @@ def load_words(path):
     """
     words = []
 
-    with open(path, encoding= "utf-8") as word_file:
+    with open(path, encoding="utf-8") as word_file:
         for line in word_file:
             word = line.strip()
             if len(word) >= 5 and word.isascii() and word.isalpha():
@@ -56,16 +58,19 @@ def load_words(path):
 
     if not words:
         raise ValueError(f"No valid words found in {path}")
- 
+
     return words
+
 
 def choose_word(words, seed=None):
     """Choose a random word from a list of words.
 
     Args:
-        words (list of str): the list of words to choose from"""
+        words (list of str): the list of words to choose from
+        seed (str | None): optional seed for deterministic selection"""
     generator = random.Random(seed)
     return generator.choice(words)
+
 
 def show_state(word, guessed, lives):
     """Display the masked word, remaining lives, and guessed letters."""
@@ -90,16 +95,21 @@ def read_input(hint_enabled):
             print("Hints are disabled. Please enter a single A-Z letter.")
             continue
 
-        letter = raw_input.upper()
-        if len(letter) == 1 and letter in string.ascii_uppercase:
-            return letter
+        if (len(raw_input) == 1 and raw_input.isascii()
+                and raw_input.isalpha()):
+            return raw_input.upper()
 
         print("Invalid input. Please enter a single A-Z letter.")
 
 
 def show_hint_message(revealed_letter):
     """Display the hint reveal message."""
-    print(f"[HINT] Revealed: {revealed_letter.lower()} (life -1).")
+    print(f"[HINT] Revealed: {revealed_letter.lower()} (life -1)")
+
+
+def show_repeat_message(letter):
+    """Display a warning when a letter has already been guessed."""
+    print(f"You already guessed '{letter}'. Try another letter.")
 
 
 def show_game_result(won, word):
@@ -108,7 +118,6 @@ def show_game_result(won, word):
         print(f"Congratulations! Word: {word}")
     else:
         print(f"Game over. Word: {word}")
-
 
 
 # Oyuncunun bir harf tahminini işler.
@@ -139,7 +148,7 @@ def apply_guess(word, guessed_letters, lives, letter, mode):
     remaining_lives = max(0, lives - penalty)
 
     # Kalan canı ve yanlış tahmin sonucunu döndür.
-    return remaining_lives, "wrong"   
+    return remaining_lives, "wrong"
 
 
 def apply_hint(word, guessed_letters, lives):
@@ -175,13 +184,47 @@ def has_won(word, guessed_letters):
     return True
 
 
+def play_game(args, word):
+    """Run the main game loop and return the exit code."""
+    guessed = set()
+    lives = args.lives
+    hint_enabled = args.hint == "on"
+
+    while lives > 0 and not has_won(word, guessed):
+        show_state(word, guessed, lives)
+        user_input = read_input(hint_enabled)
+
+        if user_input == "?":
+            lives, revealed = apply_hint(word, guessed, lives)
+            if revealed is not None:
+                show_hint_message(revealed)
+        else:
+            lives, result = apply_guess(
+                word, guessed, lives, user_input, args.mode
+            )
+            if result == "repeat":
+                show_repeat_message(user_input)
+
+    won = has_won(word, guessed)
+    show_game_result(won, word)
+    return 0
 
 
+def main():
+    """Connect all game components, handle errors, and exit cleanly."""
+    try:
+        args = parse_args()
+        words = load_words(args.words)
+        word = choose_word(words, seed=args.seed)
+        exit_code = play_game(args, word)
+        sys.exit(exit_code)
+    except (OSError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(2)
+    except (KeyboardInterrupt, EOFError):
+        print("\nGame interrupted.")
+        sys.exit(0)
 
 
-# GECICI TEST: Uye 5 main() fonksiyonunu yazinca bu iki satir silinecek.
 if __name__ == "__main__":
-    args = parse_args()
-    words = load_words(args.words)
-    word = choose_word(words, seed=args.seed)
-    print(word)
+    main()
