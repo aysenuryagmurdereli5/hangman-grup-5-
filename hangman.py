@@ -7,6 +7,7 @@ Usage:
 
 import argparse
 import random
+import string
 
 MIN_LIVES = 3
 MAX_LIVES = 10
@@ -65,6 +66,48 @@ def choose_word(words, seed=None):
         words (list of str): the list of words to choose from"""
     generator = random.Random(seed)
     return generator.choice(words)
+
+def show_state(word, guessed, lives):
+    """Display the masked word, remaining lives, and guessed letters."""
+    masked_word = " ".join(
+        letter if letter in guessed else "_" for letter in word
+    )
+    guessed_display = ", ".join(sorted(guessed)) if guessed else "-"
+
+    print(f"Word: {masked_word}")
+    print(f"Lives: {lives}")
+    print(f"Guessed: {guessed_display}")
+
+
+def read_input(hint_enabled):
+    """Prompt the user for a single A-Z letter or '?' if hints are enabled."""
+    while True:
+        raw_input = input("> Enter a letter: ").strip()
+
+        if raw_input == "?":
+            if hint_enabled:
+                return "?"
+            print("Hints are disabled. Please enter a single A-Z letter.")
+            continue
+
+        letter = raw_input.upper()
+        if len(letter) == 1 and letter in string.ascii_uppercase:
+            return letter
+
+        print("Invalid input. Please enter a single A-Z letter.")
+
+
+def show_hint_message(revealed_letter):
+    """Display the hint reveal message."""
+    print(f"[HINT] Revealed: {revealed_letter.lower()} (life -1).")
+
+
+def show_game_result(won, word):
+    """Display the final win or game over message."""
+    if won:
+        print(f"Congratulations! Word: {word}")
+    else:
+        print(f"Game over. Word: {word}")
 
 
 
